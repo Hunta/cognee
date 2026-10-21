@@ -24,6 +24,7 @@ from openai import AsyncOpenAI
 from tenacity import (
     before_sleep_log,
     retry,
+    stop_after_attempt,
     stop_after_delay,
     wait_exponential_jitter,
 )
