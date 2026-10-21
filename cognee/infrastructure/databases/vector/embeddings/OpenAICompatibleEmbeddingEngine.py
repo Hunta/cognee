@@ -137,8 +137,14 @@ class OpenAICompatibleEmbeddingEngine(EmbeddingEngine):
 
     @observe(as_type="embeddings")
     @retry(
-        stop=stop_after_delay(128),
-        wait=wait_exponential_jitter(2, 128),
+        # Bounded by ATTEMPT COUNT, not wall-clock. A persistent 500 from a
+        # dead embedding server must fail fast instead of looping for 128s and
+        # wedging the whole pipeline (see local/patches: cognee pipeline ERRORED
+        # on repeated "Error embedding text: 500"). stop_after_delay(128) was
+        # too permissive -- it retries on ANY EmbeddingException, including
+        # terminal server errors, for up to 128 seconds.
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(2, 3),
         # Budget exhaustion is terminal too: this engine talks to any
         # OpenAI-compatible base URL, a LiteLLM proxy included. It is classified
         # by predicate rather than by class -- see embeddings/retry_config.py.
